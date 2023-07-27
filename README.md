@@ -29,7 +29,7 @@ becomes:
 mv /root/.local/share/godot/templates/${GODOT_VERSION}.stable.mono ~/.local/share/godot/templates/${GODOT_VERSION}.stable.mono
 ```
 
-### Android
+### Androidd
 
 To build a debug release (debug.keystore), use the `android_debug` job example in the `gitlab-ci.yml` file.
 
