@@ -1,138 +1,116 @@
-name: compile-and-build-client
-on:
-  push:
-    branches: [ master ]
+name: "godot-ci export"
+on: push
 
+env:
+  GODOT_VERSION: 3.3.4
+  EXPORT_NAME: test-project
+  PROJECT_PATH: test-project
+  
 jobs:
-
-  compile-client-windows:
+  export-windows:
+    name: Windows Export
     runs-on: ubuntu-20.04
-    container: barichello/godot-ci:3.3.4
+    container:
+      image: barichello/godot-ci:3.3.4
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           lfs: true
-      - name: Make directories
+      - name: Setup
         run: |
           mkdir -v -p ~/.local/share/godot/templates
-          mkdir -v -p build/windows
-          mkdir -v -p .godot/editor
-          mkdir -v -p .godot/imported
-
-      - name: Export Windows
+          mv /root/.local/share/godot/templates/${GODOT_VERSION}.stable ~/.local/share/godot/templates/${GODOT_VERSION}.stable
+      - name: Windows Build
         run: |
-          godot -v --headless export-release Windows build/windows/frag-z-client.exe
-      
+          mkdir -v -p build/windows
+          cd $PROJECT_PATH
+          godot -v --export "Windows Desktop" ../build/windows/$EXPORT_NAME.exe
       - name: Upload Artifact
         uses: actions/upload-artifact@v1
         with:
           name: windows
           path: build/windows
 
-      - name: Get Timestamp
-        run: date > build/windows
-
-      - name: Push exe to website repo
-        env: 
-          CI_COMMIT_AUTHOR: frag-z-ci
-          ACCESS_TOKEN: '${{ secrets.ACCESS_TOKEN }}'
-        if: success()
-        run: |
-          cd lib
-          git config --global user.email "username@users.noreply.github.com"
-          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-          git config --global credential.helper cache
-          git clone https://${{secrets.ACCESS_TOKEN}}@github.com/frag-z/frag-z-test-website
-          cp index.js exports/ -f
-          cd exports
-          git add .
-          git commit -m "$(date)"
-
-  compile-client-linux:
+  export-linux:
+    name: Linux Export
     runs-on: ubuntu-20.04
-    container: barichello/godot-ci:3.3.4
+    container:
+      image: barichello/godot-ci:3.3.4
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           lfs: true
-      - name: Make directories
+      - name: Setup
         run: |
           mkdir -v -p ~/.local/share/godot/templates
-          mkdir -v -p build/linux
-          mkdir -v -p .godot/editor
-          mkdir -v -p .godot/imported
-
-      - name: Export Linux
+          mv /root/.local/share/godot/templates/${GODOT_VERSION}.stable ~/.local/share/godot/templates/${GODOT_VERSION}.stable
+      - name: Linux Build
         run: |
-          godot -v --headless export-release Linux build/linux/frag-z-client.exe
-
+          mkdir -v -p build/linux
+          cd $PROJECT_PATH
+          godot -v --export "Linux/X11" ../build/linux/$EXPORT_NAME.x86_64
       - name: Upload Artifact
         uses: actions/upload-artifact@v1
         with:
           name: linux
           path: build/linux
 
-      - name: Get Timestamp
-        run: date > build/linux
-
-      - name: Push exe to website repo
-        env: 
-          CI_COMMIT_AUTHOR: frag-z-ci
-          ACCESS_TOKEN: '${{ secrets.ACCESS_TOKEN }}'
-        if: success()
-        run: |
-          cd lib
-          git config --global user.email "username@users.noreply.github.com"
-          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-          git config --global credential.helper cache
-          git clone https://${{secrets.ACCESS_TOKEN}}@github.com/frag-z/frag-z-test-website
-          cp index.js exports/ -f
-          cd exports
-          git add .
-          git commit -m "$(date)"
-
-  compile-client-macOS:
+  export-web:
+    name: Web Export
     runs-on: ubuntu-20.04
-    container: barichello/godot-ci:3.3.4
+    container:
+      image: barichello/godot-ci:3.3.4
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           lfs: true
-      - name: Make directories
+      - name: Setup
         run: |
           mkdir -v -p ~/.local/share/godot/templates
-          mkdir -v -p build/macOS
-          mkdir -v -p .godot/editor
-          mkdir -v -p .godot/imported
-
-      - name: Export MacOS
+          mv /root/.local/share/godot/templates/${GODOT_VERSION}.stable ~/.local/share/godot/templates/${GODOT_VERSION}.stable
+      - name: Web Build
         run: |
-          godot -v --headless export-release MacOS build/macOS/frag-z-client.exe
-      
+          mkdir -v -p build/web
+          cd $PROJECT_PATH
+          godot -v --export "HTML5" ../build/web/index.html
       - name: Upload Artifact
         uses: actions/upload-artifact@v1
         with:
-          name: MacOS
-          path: build/macOS
-
-      - name: Get Timestamp
-        run: date > build/macOS
-
-      - name: Push exe to website repo
-        env: 
-          CI_COMMIT_AUTHOR: frag-z-ci
-          ACCESS_TOKEN: '${{ secrets.ACCESS_TOKEN }}'
-        if: success()
+          name: web
+          path: build/web
+      - name: Install rsync 📚
         run: |
-          cd lib
-          git config --global user.email "username@users.noreply.github.com"
-          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-          git config --global credential.helper cache
-          git clone https://${{secrets.ACCESS_TOKEN}}@github.com/frag-z/frag-z-test-website
-          cp index.js exports/ -f
-          cd exports
-          git add .
-          git commit -m "$(date)"
+          apt-get update && apt-get install -y rsync
+      - name: Deploy to GitHub Pages 🚀
+        uses: JamesIves/github-pages-deploy-action@releases/v4
+        with:
+          branch: gh-pages # The branch the action should deploy to.
+          folder: build/web # The folder the action should deploy.
+
+  export-mac:
+    name: Mac Export
+    runs-on: ubuntu-20.04
+    container:
+      image: barichello/godot-ci:3.3.4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+      - name: Setup
+        run: |
+          mkdir -v -p ~/.local/share/godot/templates
+          mv /root/.local/share/godot/templates/${GODOT_VERSION}.stable ~/.local/share/godot/templates/${GODOT_VERSION}.stable
+      - name: Mac Build
+        run: |
+          mkdir -v -p build/mac
+          cd $PROJECT_PATH
+          godot -v --export "Mac OSX" ../build/mac/$EXPORT_NAME.zip
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: mac
+          path: build/mac
