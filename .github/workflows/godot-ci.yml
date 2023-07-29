@@ -1,7 +1,7 @@
 name: compile-and-build-client
 on:
   push:
-    branches: [ master ]
+    branches: [ branch_name ]
 
 jobs:
 
